@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myanswer
+  labels:
+    app: myanswer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myanswer
+  template:
+    metadata:
+      labels:
+        app: myanswer
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: myanswer
+          #image: apache/answer #change it to your image
+          image: apache/answer
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 9080
+          volumeMounts:
+            - name: myanswer
+              mountPath: /data
+      volumes:
+        - name: myanswer
+          persistentVolumeClaim:
+            claimName: myanswer-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: myanswer
+  labels:
+    app: myanswer
+spec:
+  selector:
+    app: myanswer
+  ports:
+    - protocol: TCP
+      port: 9080
+      targetPort: 80
+---
+apiVersion: gateway.kyma-project.io/v1beta1
+kind: APIRule
+metadata:
+  name: demo##-myanswer-rule
+  namespace: apacheanswerns##
+spec:
+  gateway: kyma-gateway.kyma-system.svc.cluster.local
+  service:
+    name: myanswer
+    port: 9080
+#    host: demo##-mystrapi
+  host: demo##-myanswer
+  rules:
+    - path: /.*
+      methods: ["GET","POST","PUT","DELETE"]
+      mutators: []
+      accessStrategies:
+        - handler: noop
